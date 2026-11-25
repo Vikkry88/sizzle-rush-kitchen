@@ -3,16 +3,91 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Block Dodger</title>
+<link rel="icon" href="data:,">
+<title>Sizzle Rush — 3D Kitchen Rush</title>
 <style>
-  html, body { margin: 0; height: 100%; overflow: hidden; background: #11141b; }
-  #game { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
-  /* Read aloud, never shown: the status line screen readers announce. */
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #17100b; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+  #scene { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+  #hud { position: fixed; inset: 0; pointer-events: none; color: #fff7ea; }
+  .panel { background: rgba(24, 14, 8, 0.82); border: 2px solid rgba(255, 190, 90, 0.55); border-radius: 12px; box-shadow: 0 4px 18px rgba(0,0,0,0.45); }
+  #topbar { position: absolute; top: 10px; left: 10px; right: 10px; display: flex; gap: 10px; align-items: stretch; }
+  #brand { padding: 8px 14px; font-weight: 900; font-size: 26px; letter-spacing: 1px; color: #ffb63d; line-height: 1; }
+  #brand small { display: block; font-size: 11px; letter-spacing: 3px; color: #ffd9a0; font-weight: 700; }
+  #scorebox { padding: 6px 16px; text-align: center; min-width: 130px; }
+  #scorebox .lbl { font-size: 11px; letter-spacing: 2px; color: #ffcf8a; font-weight: 700; }
+  #score { font-size: 30px; font-weight: 900; line-height: 1; color: #fff; }
+  #combo { padding: 6px 14px; text-align: center; min-width: 96px; }
+  #combo .lbl { font-size: 11px; letter-spacing: 2px; color: #ffcf8a; font-weight: 700; }
+  #comboVal { font-size: 28px; font-weight: 900; line-height: 1; color: #ff7a3d; }
+  #timerbox { margin-left: auto; padding: 6px 18px; text-align: center; min-width: 150px; }
+  #timerbox .lbl { font-size: 11px; letter-spacing: 2px; color: #ffcf8a; font-weight: 700; }
+  #shiftTimer { font-size: 32px; font-weight: 900; line-height: 1; color: #fff; }
+  #shiftTimer.low { color: #ff5a4e; }
+  #servedbox { padding: 6px 14px; text-align: center; }
+  #servedbox .lbl { font-size: 11px; letter-spacing: 2px; color: #ffcf8a; font-weight: 700; }
+  #served { font-size: 28px; font-weight: 900; line-height: 1; }
+  #orders { position: absolute; top: 92px; left: 10px; width: 308px; padding: 10px 12px; }
+  #orders h2 { margin: 0 0 8px 0; font-size: 16px; letter-spacing: 2px; color: #ffb63d; }
+  .order { background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(255, 190, 90, 0.35); border-radius: 8px; padding: 7px 9px; margin-bottom: 8px; }
+  .order .oname { font-size: 17px; font-weight: 800; display: flex; justify-content: space-between; }
+  .order .otime { font-size: 15px; font-weight: 900; color: #ffd166; }
+  .order .otime.low { color: #ff5a4e; }
+  .order .bar { height: 6px; background: rgba(255,255,255,0.15); border-radius: 3px; margin: 5px 0 6px; overflow: hidden; }
+  .order .bar i { display: block; height: 100%; background: #ffb63d; }
+  .order .bar i.low { background: #ff5a4e; }
+  .chips { display: flex; flex-wrap: wrap; gap: 4px; }
+  .chip { font-size: 12px; font-weight: 700; padding: 2px 7px; border-radius: 20px; background: rgba(255,255,255,0.12); color: #ffe9c9; }
+  .chip.done { background: #2f9e44; color: #fff; }
+  .chip.need { background: #c92a2a; color: #fff; }
+  #prompt { position: absolute; bottom: 118px; left: 50%; transform: translateX(-50%); padding: 8px 20px; font-size: 19px; font-weight: 800; color: #ffe9c9; white-space: nowrap; }
+  #prompt b { color: #ffb63d; }
+  #carry { position: absolute; bottom: 10px; left: 10px; padding: 10px 14px; min-width: 220px; }
+  #carry .lbl { font-size: 11px; letter-spacing: 2px; color: #ffcf8a; font-weight: 700; }
+  #carryVal { font-size: 20px; font-weight: 800; }
+  #platebox { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); padding: 10px 16px; min-width: 340px; text-align: center; }
+  #platebox .lbl { font-size: 11px; letter-spacing: 2px; color: #ffcf8a; font-weight: 700; }
+  #plateVal { font-size: 18px; font-weight: 800; min-height: 24px; }
+  #plateMatch { font-size: 13px; font-weight: 800; color: #7CFC9A; min-height: 18px; }
+  #hint { position: absolute; bottom: 10px; right: 10px; padding: 10px 14px; font-size: 13px; line-height: 1.5; color: #ffe9c9; text-align: right; }
+  #hint b { color: #ffb63d; }
+  #flash { position: absolute; top: 42%; left: 50%; transform: translate(-50%, -50%); font-size: 44px; font-weight: 900; color: #ffd166; text-shadow: 0 3px 0 rgba(0,0,0,0.5); opacity: 0; transition: opacity 0.15s; text-align: center; }
+  #workbar { position: absolute; bottom: 178px; left: 50%; transform: translateX(-50%); width: 300px; display: none; }
+  #workbar .lbl { text-align: center; font-size: 15px; font-weight: 800; color: #ffe9c9; margin-bottom: 4px; }
+  #workbar .bar { height: 14px; background: rgba(0,0,0,0.6); border: 2px solid #ffb63d; border-radius: 8px; overflow: hidden; }
+  #workbar .bar i { display: block; height: 100%; background: #ff7a3d; width: 0%; }
+  #overlay { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(12, 7, 4, 0.55); pointer-events: none; }
+  #overlay .card { pointer-events: auto; background: rgba(24, 14, 8, 0.94); border: 3px solid #ffb63d; border-radius: 18px; padding: 26px 34px; text-align: center; max-width: 620px; }
+  #overlay h1 { margin: 0 0 4px; font-size: 52px; color: #ffb63d; letter-spacing: 2px; line-height: 1; }
+  #overlay h2 { margin: 0 0 12px; font-size: 18px; color: #ffd9a0; letter-spacing: 4px; }
+  #overlay p { margin: 6px 0; font-size: 16px; line-height: 1.45; color: #fff7ea; }
+  #overlay .big { font-size: 30px; font-weight: 900; color: #fff; }
+  #overlay .keys { font-size: 14px; color: #ffcf8a; }
+  #overlay .keys b { color: #ffb63d; }
   #status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 </style>
+<script type="importmap">
+{ "imports": { "three": "./vendor/three.module.min.js" } }
+</script>
 </head>
 <body>
-<canvas id="game" aria-label="Block Dodger: move the paddle left and right to dodge falling blocks and catch coins"></canvas>
+<canvas id="scene" aria-label="Sizzle Rush: a 3D cooking game. Move with WASD, press E to grab, chop, cook and serve."></canvas>
+<div id="hud">
+  <div id="topbar">
+    <div id="brand" class="panel">SIZZLE RUSH<small>3D KITCHEN RUSH</small></div>
+    <div id="scorebox" class="panel"><div class="lbl">SCORE</div><div id="score">0</div></div>
+    <div id="combo" class="panel"><div class="lbl">COMBO</div><div id="comboVal">x1.0</div></div>
+    <div id="servedbox" class="panel"><div class="lbl">SERVED</div><div id="served">0</div></div>
+    <div id="timerbox" class="panel"><div class="lbl">SHIFT TIMER</div><div id="shiftTimer">3:00</div></div>
+  </div>
+  <div id="orders" class="panel"><h2>🍳 ORDER BOARD</h2><div id="orderList"></div></div>
+  <div id="prompt" class="panel" style="display:none"></div>
+  <div id="workbar"><div class="lbl" id="workLabel">Chopping…</div><div class="bar"><i id="workFill"></i></div></div>
+  <div id="flash"></div>
+  <div id="carry" class="panel"><div class="lbl">IN HAND</div><div id="carryVal">— empty hands —</div></div>
+  <div id="platebox" class="panel"><div class="lbl">PLATE — ASSEMBLY</div><div id="plateVal">Plate is empty</div><div id="plateMatch"></div></div>
+  <div id="hint" class="panel"><b>WASD / Arrows</b> move &nbsp; <b>E</b> grab · chop · cook · plate · serve<br><b>P</b> pause &nbsp; <b>R</b> restart &nbsp; <b>Enter</b> start</div>
+</div>
+<div id="overlay"></div>
 <p id="status" role="status" aria-live="polite"></p>
 <script type="module" src="./src/main.js"></script>
 </body>
